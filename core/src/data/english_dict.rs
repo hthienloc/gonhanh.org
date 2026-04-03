@@ -4,13 +4,13 @@
 //! Only restores to English when raw_input is a known English word.
 
 use std::collections::HashSet;
-use std::sync::LazyLock;
+use once_cell::sync::Lazy;
 
 /// Embedded English word list (10k + double telex patterns)
 const ENGLISH_WORDS: &str = include_str!("english_dict_merged.txt");
 
 /// HashSet for O(1) lookup
-static DICT: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+static DICT: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     ENGLISH_WORDS
         .lines()
         .filter(|line| !line.is_empty())

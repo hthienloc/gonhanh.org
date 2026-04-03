@@ -4,7 +4,7 @@
 //! Memory-efficient: ~0.5MB vs ~5.5MB with full Hunspell implementation.
 
 use std::collections::HashSet;
-use std::sync::LazyLock;
+use once_cell::sync::Lazy;
 
 // Embed dictionary files into binary
 const DIC_VI: &str = include_str!("dictionaries/vi.dic");
@@ -16,11 +16,11 @@ fn parse_dic_to_hashset(dic_content: &'static str) -> HashSet<&'static str> {
 }
 
 /// Lazy-loaded Vietnamese dictionary - ~0.5MB memory
-static DICT_VI: LazyLock<HashSet<&'static str>> = LazyLock::new(|| parse_dic_to_hashset(DIC_VI));
+static DICT_VI: Lazy<HashSet<&'static str>> = Lazy::new(|| parse_dic_to_hashset(DIC_VI));
 
 /// Lazy-loaded keep list - words that should not be auto-restored
-static DICT_KEEP: LazyLock<HashSet<&'static str>> =
-    LazyLock::new(|| parse_dic_to_hashset(DIC_KEEP));
+static DICT_KEEP: Lazy<HashSet<&'static str>> =
+    Lazy::new(|| parse_dic_to_hashset(DIC_KEEP));
 
 /// Check if word starts with foreign consonant (z, w, j, f)
 fn starts_with_foreign_consonant(word: &str) -> bool {
