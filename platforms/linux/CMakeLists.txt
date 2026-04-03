@@ -4,10 +4,21 @@ project(fcitx5-gonhanh VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Fcitx5 (Recommended way: find_package via ECM)
-find_package(ECM 1.0.0 REQUIRED)
-set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${CMAKE_MODULE_PATH})
-find_package(Fcitx5Core REQUIRED)
+# Find PkgConfig (Always useful)
+find_package(PkgConfig REQUIRED)
+
+# Try finding Fcitx5 via ECM (Standard way)
+find_package(ECM 1.0.0 QUIET)
+if (ECM_FOUND)
+    set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH} ${CMAKE_MODULE_PATH})
+    find_package(Fcitx5Core REQUIRED)
+    set(FCITX5_CORE_TARGET Fcitx5::Core)
+else()
+    # Fallback to PkgConfig if ECM is missing
+    message(STATUS "ECM not found, falling back to PkgConfig for Fcitx5")
+    pkg_check_modules(Fcitx5Core REQUIRED IMPORTED_TARGET Fcitx5Core)
+    set(FCITX5_CORE_TARGET PkgConfig::Fcitx5Core)
+endif()
 
 include(GNUInstallDirs)
 
@@ -38,7 +49,7 @@ target_include_directories(gonhanh PRIVATE
 
 # Link libraries
 target_link_libraries(gonhanh
-    Fcitx5::Core
+    ${FCITX5_CORE_TARGET}
     ${RUST_LIB_DIR}/lib${RUST_LIB_NAME}.so
 )
 
