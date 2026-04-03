@@ -6,5 +6,5 @@ CXX_DEFINES = -Dgonhanh_EXPORTS
 
 CXX_INCLUDES = -I/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/src -I/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/../../core/target/release -isystem /usr/include/Fcitx5/Core -isystem /usr/include/Fcitx5/Config -isystem /usr/include/Fcitx5/Utils -isystem /usr/include/Fcitx5/Module
 
-CXX_FLAGS = -O3 -DNDEBUG -std=gnu++17 -fPIC
+CXX_FLAGS = -O3 -DNDEBUG -std=gnu++20 -fPIC
 

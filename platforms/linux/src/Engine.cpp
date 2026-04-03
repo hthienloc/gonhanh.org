@@ -3,8 +3,6 @@
 #include <fstream>
 #include <cstdlib>
 
-FCITX_DEFINE_LOG_CATEGORY(gonhanh, "gonhanh");
-
 namespace GoNhanh {
 
 // Load method from config file

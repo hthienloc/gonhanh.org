@@ -10,13 +10,13 @@
 
 #include "RustBridge.h"
 
-FCITX_DECLARE_LOG_CATEGORY(gonhanh, "gonhanh");
-#define GONHANH_DEBUG() FCITX_LOGC(::gonhanh, Debug)
-#define GONHANH_INFO() FCITX_LOGC(::gonhanh, Info)
-#define GONHANH_WARN() FCITX_LOGC(::gonhanh, Warn)
-#define GONHANH_ERROR() FCITX_LOGC(::gonhanh, Error)
-
 namespace GoNhanh {
+
+#include <iostream>
+#define GONHANH_DEBUG() std::cerr << "[GoNhanh][DEBUG] "
+#define GONHANH_INFO() std::cerr << "[GoNhanh][INFO] "
+#define GONHANH_WARN() std::cerr << "[GoNhanh][WARN] "
+#define GONHANH_ERROR() std::cerr << "[GoNhanh][ERROR] "
 
 // Input context state
 class GoNhanhState : public fcitx::InputContextProperty {
