@@ -1,0 +1,223 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-deb:
+    name: DEB [${{ matrix.codename }}]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: debian:12
+            codename: bookworm
+          - distro: debian:13
+            codename: trixie
+          - distro: debian:testing
+            codename: testing
+          - distro: debian:unstable
+            codename: sid
+          - distro: ubuntu:22.04
+            codename: jammy
+          - distro: ubuntu:24.04
+            codename: noble
+          - distro: ubuntu:25.04
+            codename: plucky
+          - distro: ubuntu:25.10
+            codename: questing
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Prepare debian directory
+        run: cp -r packaging/debian debian
+
+      - name: Build DEB
+        uses: jtdor/build-deb-action@v1
+        with:
+          docker-image: ${{ matrix.distro }}
+          buildpackage-opts: --build=binary --no-sign
+
+      - name: Rename DEB artifacts
+        run: |
+          for f in debian/artifacts/*.deb; do
+            base=$(basename "$f" .deb)
+            sudo mv "$f" "debian/artifacts/${base}_${{ matrix.codename }}.deb"
+          done
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.codename }}
+          path: debian/artifacts/*.deb
+          retention-days: 1
+
+  build-rpm-fedora:
+    name: RPM [fedora-${{ matrix.releasever }}]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora:42
+            releasever: 42
+          - distro: fedora:43
+            releasever: 43
+          - distro: fedora:rawhide
+            releasever: rawhide
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Fedora RPM
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ matrix.distro }}
+          options: -v ${{ github.workspace }}:/work
+          run: |
+            set -euo pipefail
+            dnf install -y rpm-build rpmdevtools dnf-plugins-core cargo rust
+            rpmdev-setuptree
+            cp /work/packaging/rpm/fedora/gonhanh.spec ~/rpmbuild/SPECS/
+            dnf builddep -y ~/rpmbuild/SPECS/gonhanh.spec
+            mkdir -p ~/rpmbuild/SOURCES
+            cd /work
+            VERSION=$(grep '^Version:' packaging/rpm/fedora/gonhanh.spec | awk '{print $2}')
+            tar --exclude='.git' \
+                --exclude='packaging' \
+                --transform "s|^\.|gonhanh-${VERSION}|" \
+                -czf ~/rpmbuild/SOURCES/gonhanh-${VERSION}.tar.gz .
+            rpmbuild -bb ~/rpmbuild/SPECS/gonhanh.spec
+            mkdir -p /work/output
+            for rpm in ~/rpmbuild/RPMS/**/*.rpm; do
+              base=$(basename "$rpm" .rpm)
+              mv "$rpm" "/work/output/${base}.${{ matrix.releasever }}.rpm"
+            done
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-fedora-${{ matrix.releasever }}
+          path: output/*.rpm
+          retention-days: 1
+
+  build-arch:
+    name: Arch Linux (zstd)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build on Arch Linux
+        uses: addnab/docker-run-action@v3
+        with:
+          image: archlinux:latest
+          options: -v ${{ github.workspace }}:/work
+          run: |
+            set -euo pipefail
+            pacman -Syu --noconfirm \
+              cmake extra-cmake-modules gcc cargo rust \
+              fcitx5 make pkgconf zstd
+
+            cd /work
+            # Build Rust core
+            cargo build --manifest-path core/Cargo.toml --release
+            
+            # Build C++ addon
+            cd platforms/linux
+            cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -B build .
+            cmake --build build
+            DESTDIR=/work/arch-dist cmake --install build
+
+      - name: Package as tar.zst
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION//\//-}"
+          tar -c -I 'zstd -19 -T0' -f "gonhanh-${VERSION}-x86_64-archlinux.tar.zst" -C arch-dist .
+
+      - name: Upload Arch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-tar-zst
+          path: gonhanh-*-x86_64-archlinux.tar.zst
+          retention-days: 1
+
+  build-rpm-opensuse:
+    name: RPM [opensuse-${{ matrix.releasever }}]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: opensuse/tumbleweed
+            releasever: tumbleweed
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build openSUSE RPM
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ matrix.distro }}
+          options: -v ${{ github.workspace }}:/work
+          run: |
+            set -euo pipefail
+            zypper -n install rpm-build rpmdevtools cmake extra-cmake-modules gcc-c++ fcitx5-devel cargo rust pkg-config
+            rpmdev-setuptree
+            cp /work/packaging/rpm/opensuse/gonhanh.spec ~/rpmbuild/SPECS/
+            mkdir -p ~/rpmbuild/SOURCES
+            cd /work
+            VERSION=$(grep '^Version:' packaging/rpm/opensuse/gonhanh.spec | awk '{print $2}')
+            tar --exclude='.git' \
+                --exclude='packaging' \
+                --transform "s|^\.|gonhanh-${VERSION}|" \
+                -czf ~/rpmbuild/SOURCES/gonhanh-${VERSION}.tar.gz .
+            rpmbuild -bb ~/rpmbuild/SPECS/gonhanh.spec
+            mkdir -p /work/output
+            for rpm in ~/rpmbuild/RPMS/**/*.rpm; do
+              base=$(basename "$rpm" .rpm)
+              mv "$rpm" "/work/output/${base}.${{ matrix.releasever }}.rpm"
+            done
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-opensuse-${{ matrix.releasever }}
+          path: output/*.rpm
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    needs: [build-deb, build-rpm-fedora, build-rpm-opensuse, build-arch]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Hash assets and create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
+            artifacts/**/*.tar.zst
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

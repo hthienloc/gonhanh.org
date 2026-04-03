@@ -1,0 +1,42 @@
+name: Dev Packaging
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Multi-Distro (Test)
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [ubuntu-latest, fedora-latest] # Simplified for dev testing
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies (Ubuntu)
+        if: matrix.distro == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fcitx5 libfcitx5core-dev libfcitx5config-dev libfcitx5utils-dev cmake pkg-config cargo rustc
+          
+      - name: Build Rust core
+        run: cargo build --manifest-path core/Cargo.toml --release
+        
+      - name: Build C++ addon
+        run: |
+          cd platforms/linux
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=20
+          make -j$(nproc)
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gonhanh-dev-${{ matrix.distro }}
+          path: |
+            platforms/linux/build/gonhanh.so
+            core/target/release/libgonhanh_core.so

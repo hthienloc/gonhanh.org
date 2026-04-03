@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=20
+
+override_dh_auto_build:
+	# Build Rust core
+	cargo build --manifest-path core/Cargo.toml --release
+	# Build C++ addon
+	dh_auto_build
