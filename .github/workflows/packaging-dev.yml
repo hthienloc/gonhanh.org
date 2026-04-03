@@ -11,17 +11,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: [ubuntu-latest, fedora-latest] # Simplified for dev testing
-
+        distro: [ubuntu, fedora]
+    
     runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.distro == 'ubuntu' && 'ubuntu:latest' || 'fedora:latest' }}
+
     steps:
       - uses: actions/checkout@v4
       
       - name: Install dependencies (Ubuntu)
-        if: matrix.distro == 'ubuntu-latest'
+        if: matrix.distro == 'ubuntu'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fcitx5 libfcitx5core-dev libfcitx5config-dev libfcitx5utils-dev cmake pkg-config cargo rustc libxkbcommon-dev extra-cmake-modules
+          apt-get update
+          apt-get install -y fcitx5 libfcitx5core-dev libfcitx5config-dev libfcitx5utils-dev cmake pkg-config cargo rustc libxkbcommon-dev extra-cmake-modules g++
+          
+      - name: Install dependencies (Fedora)
+        if: matrix.distro == 'fedora'
+        run: |
+          dnf install -y fcitx5-devel extra-cmake-modules libxkbcommon-devel cmake gcc-c++ pkgconfig cargo rust
           
       - name: Build Rust core
         run: cargo build --manifest-path core/Cargo.toml --release
