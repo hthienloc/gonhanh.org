@@ -3,7 +3,20 @@
     "core": {
       "release-type": "rust",
       "package-name": "gonhanh-core",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        {"type": "feat", "section": "✨ Tính năng mới", "hidden": false},
+        {"type": "fix", "section": "🐛 Sửa lỗi", "hidden": false},
+        {"type": "perf", "section": "⚡ Tối ưu hiệu năng", "hidden": false},
+        {"type": "revert", "section": "⏪ Reverts", "hidden": false},
+        {"type": "chore", "hidden": true},
+        {"type": "refactor", "hidden": true},
+        {"type": "style", "hidden": true},
+        {"type": "test", "hidden": true},
+        {"type": "build", "hidden": true},
+        {"type": "ci", "hidden": true},
+        {"type": "docs", "hidden": true}
+      ]
     }
   },
   "plugins": [],
