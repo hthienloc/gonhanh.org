@@ -214,7 +214,7 @@ jobs:
         with:
           allowUpdates: true
           generateReleaseNotes: true
-          artifacts: "*.deb,*.rpm,*.tar.zst,*.so"
+          artifacts: "artifacts/**/*.deb,artifacts/**/*.rpm,artifacts/**/*.tar.zst,artifacts/**/*.so"
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
