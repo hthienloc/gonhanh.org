@@ -1,0 +1,11 @@
+{
+  "packages": {
+    "core": {
+      "release-type": "rust",
+      "package-name": "gonhanh-core",
+      "changelog-path": "CHANGELOG.md"
+    }
+  },
+  "plugins": [],
+  "release-type": "rust"
+}

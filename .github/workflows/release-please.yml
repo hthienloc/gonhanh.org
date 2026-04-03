@@ -15,8 +15,5 @@ jobs:
     steps:
       - uses: google-github-actions/release-please-action@v4
         with:
-          # This should match your project type (rust will update Cargo.toml)
-          release-type: rust
-          # Path to the package (core contains Cargo.toml)
-          package-name: gonhanh-core
-          path: core
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
