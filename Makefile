@@ -23,23 +23,19 @@ help:
 	@echo ""
 	@echo "\033[1;32mDev:\033[0m"
 	@echo "  test        Run Rust tests"
-	@echo "  format      Format code (Rust + Swift)"
-	@echo "  lint        Check lint (clippy + swiftformat)"
-	@echo "  build       Build + auto-open app"
-	@echo "  build-linux Build Linux Fcitx5"
+	@echo "  format      Format code (Rust)"
+	@echo "  lint        Check lint (clippy)"
+	@echo "  build       Build Linux Fcitx5"
 	@echo "  clean       Clean artifacts"
 	@echo ""
 	@echo "\033[1;32mDebug:\033[0m"
-	@echo "  watch       Tail debug log"
-	@echo "  perf        Check RAM/leaks"
+	@echo "  watch       Tail debug log (/tmp/gonhanh_debug.log)"
 	@echo "  test-dict   Dictionary tests (VN: 100%, EN: 97%)"
 	@echo "  test-22k    Run heavy 22k tests + gen typing orders"
 	@echo "  test-100k   Run English 100k tests"
 	@echo ""
 	@echo "\033[1;32mInstall:\033[0m"
 	@echo "  setup       Setup dev environment"
-	@echo "  install     Build + copy to /Applications"
-	@echo "  dmg         Create DMG installer"
 	@echo ""
 	@echo "\033[1;32mRelease:\033[0m"
 	@echo "  release       Patch  $(TAG) → v$(NEXT_PATCH)"
@@ -51,7 +47,7 @@ help:
 # Development
 # ============================================================================
 
-.PHONY: test format lint build build-linux clean all
+.PHONY: test format lint build clean all
 all: test build
 
 test:
@@ -60,36 +56,23 @@ test:
 
 format:
 	@cd core && cargo fmt
-	@command -v swiftformat >/dev/null 2>&1 && swiftformat platforms/macos --quiet || echo "⚠️  swiftformat not found. Run: brew install swiftformat"
 
 lint:
 	@cd core && cargo clippy -- -D warnings
-	@command -v swiftformat >/dev/null 2>&1 && swiftformat platforms/macos --lint || echo "⚠️  swiftformat not found"
 
-build: format ## Build core + macos app
-	@./scripts/build/core.sh
-	@./scripts/build/macos.sh
-	@./scripts/build/windows.sh
-	@killall GoNhanh 2>/dev/null || true
-	@sleep 0.5
-	@open platforms/macos/build/Release/GoNhanh.app
-
-build-linux: format
+build: format ## Build Linux Fcitx5
 	@cd platforms/linux && ./scripts/build.sh
 
-clean: ## Clean build + settings
+clean: ## Clean build
 	@cd core && cargo clean
-	@rm -rf platforms/macos/build
 	@rm -rf platforms/linux/build
-	@defaults delete org.gonhanh.GoNhanh 2>/dev/null || true
-	@osascript -e 'tell application "System Events"' -e 'repeat with i from (count of every login item) to 1 by -1' -e 'set li to login item i' -e 'if name of li is "GoNhanh" and path of li contains "/build/" then delete login item i' -e 'end repeat' -e 'end tell' 2>/dev/null || true
-	@echo "✅ Cleaned build artifacts + settings + all login items"
+	@echo "✅ Cleaned build artifacts"
 
 # ============================================================================
 # Debug
 # ============================================================================
 
-.PHONY: watch perf test-22k test-100k test-dict
+.PHONY: watch test-22k test-100k test-dict
 watch:
 	@rm -f /tmp/gonhanh_debug.log && touch /tmp/gonhanh_debug.log
 	@echo "📋 Watching /tmp/gonhanh_debug.log (Ctrl+C to stop)"
@@ -105,33 +88,13 @@ test-100k: ## Run English 100k tests
 test-dict: ## Run dictionary tests (VN: 100%, EN: 97%)
 	@./scripts/test/dict.sh
 
-perf:
-	@PID=$$(pgrep -f "GoNhanh.app" | head -1); \
-	if [ -n "$$PID" ]; then \
-		echo "📊 GoNhanh (PID $$PID)"; \
-		ps -o rss=,vsz= -p $$PID | awk '{printf "RAM: %.1f MB | VSZ: %.0f MB\n", $$1/1024, $$2/1024}'; \
-		echo "Threads: $$(ps -M -p $$PID | tail -n +2 | wc -l | tr -d ' ')"; \
-		leaks $$PID 2>/dev/null | grep -E "(Physical|leaked)" | head -3; \
-	else echo "GoNhanh not running"; fi
-
 # ============================================================================
 # Install
 # ============================================================================
 
-.PHONY: setup install dmg
+.PHONY: setup
 setup: ## Setup dev environment
-	@./scripts/setup/macos.sh
-
-install: build
-	@osascript -e 'tell application "System Events"' -e 'repeat with i from (count of every login item) to 1 by -1' -e 'set li to login item i' -e 'if name of li is "GoNhanh" and path of li contains "/build/" then delete login item i' -e 'end repeat' -e 'end tell' 2>/dev/null || true
-	@killall GoNhanh 2>/dev/null || true
-	@sleep 0.5
-	@cp -r platforms/macos/build/Release/GoNhanh.app /Applications/
-	@open /Applications/GoNhanh.app
-
-dmg: build ## Create DMG installer
-	@./scripts/release/dmg-background.sh
-	@./scripts/release/dmg.sh
+	@./scripts/setup/linux.sh
 
 # ============================================================================
 # Release (auto-versioning from git tags)
@@ -167,6 +130,7 @@ release-major: ## Major release (1.0.9 → 2.0.0)
 	@echo "→ https://github.com/khaphanspace/gonhanh.org/releases"
 
 pre-release: ## Trigger pre-release build on CI
-	@gh workflow run pre-release.yml -f platform=macos -R khaphanspace/gonhanh.org
+	@gh workflow run pre-release.yml -R khaphanspace/gonhanh.org
 	@echo "✅ Pre-release build triggered"
 	@echo "→ https://github.com/khaphanspace/gonhanh.org/actions/workflows/pre-release.yml"
+

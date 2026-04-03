@@ -1,0 +1,8 @@
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/gonhanh.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/install-user.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/edit_cache.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/rebuild_cache.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/list_install_components.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/install.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/install/local.dir
+/home/loccun/Documents/GitHub/gonhanh.org/platforms/linux/build/CMakeFiles/install/strip.dir

@@ -76,7 +76,7 @@ DIFF_STAT=$(git diff "$FROM_REF"..HEAD --stat 2>/dev/null)
 DIFF_CONTENT=$(git diff "$FROM_REF"..HEAD --no-color 2>/dev/null | head -800)
 
 # Build prompt for Claude
-PROMPT="Generate release notes for 'Gõ Nhanh' $VERSION (Vietnamese IME for macOS/Linux).
+PROMPT="Generate release notes for 'Gõ Nhanh' $VERSION (Vietnamese IME for Linux).
 
 OUTPUT FORMAT - Follow this EXACTLY:
 ## What's Changed
@@ -97,11 +97,10 @@ RULES:
 2. Group by type IN THIS ORDER: Features (new), Improvements (refactor/perf/docs), Fixes (bugs)
 3. Skip empty sections - only include sections with actual changes
 4. Each item: 1 line, user-facing impact, Vietnamese preferred (tech terms in English OK)
-5. Platform prefix if applicable: (macOS), (linux). Always lowercase except macOS.
-6. Combine related commits into single items
-7. Ignore: release commits, version bumps, trivial changes
-8. IMPORTANT: If a commit has a PR reference like (#NNN), ALWAYS keep it at the END of the bullet line in exact format (#NNN). Never change to (Issue #NNN) or drop it.
-9. CRITICAL: EVERY bullet line MUST end with 'bởi @username'. This is taken from the commit data - preserve it exactly. When combining commits, use the 'bởi @username' from the most relevant commit. NEVER omit 'bởi @...'.
+5. Combine related commits into single items
+6. Ignore: release commits, version bumps, trivial changes
+7. IMPORTANT: If a commit has a PR reference like (#NNN), ALWAYS keep it at the END of the bullet line in exact format (#NNN). Never change to (Issue #NNN) or drop it.
+8. CRITICAL: EVERY bullet line MUST end with 'bởi @username'. This is taken from the commit data - preserve it exactly. When combining commits, use the 'bởi @username' from the most relevant commit. NEVER omit 'bởi @...'.
 
 COMMITS ($COMMIT_COUNT):
 $FORMATTED_COMMITS

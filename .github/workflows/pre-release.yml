@@ -1,23 +1,8 @@
 name: Pre-release Build
 
 on:
-  # Manual trigger (UI) - select platform
+  # Manual trigger (UI)
   workflow_dispatch:
-    inputs:
-      platform:
-        description: 'Platform to build'
-        required: true
-        default: 'macos'
-        type: choice
-        options:
-          - macos
-          - linux
-          - all
-      sign:
-        description: 'Code sign with Developer ID (requires secrets)'
-        required: false
-        default: true
-        type: boolean
   # Auto trigger on merged PR to main (owner only)
   pull_request:
     types: [closed]
@@ -27,203 +12,12 @@ permissions:
   contents: write
   pull-requests: read
 
-env:
-  # Apple Developer Configuration (only used if sign=true)
-  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-  APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-
 jobs:
-  build-macos:
-    # Manual: check platform input | PR merged: owner only, build macos
-    if: |
-      (github.event_name == 'workflow_dispatch' && (inputs.platform == 'macos' || inputs.platform == 'all')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.user.login == github.repository_owner)
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: core
-
-      # ============================================================
-      # APPLE DEVELOPER CERTIFICATE SETUP (Optional)
-      # ============================================================
-      - name: Install Apple Developer Certificate
-        if: ${{ inputs.sign == true && env.APPLE_SIGNING_IDENTITY != '' }}
-        env:
-          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ github.run_id }}
-        run: |
-          # Create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          # Decode certificate from base64
-          echo -n "$APPLE_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-
-          # Create temporary keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
-          security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Verify certificate
-          echo "Installed certificates:"
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
-
-      # ============================================================
-      # BUILD
-      # ============================================================
-      - name: Build Rust core (universal)
-        run: |
-          cd core
-          cargo build --release --target aarch64-apple-darwin
-          cargo build --release --target x86_64-apple-darwin
-          lipo -create \
-            target/aarch64-apple-darwin/release/libgonhanh_core.a \
-            target/x86_64-apple-darwin/release/libgonhanh_core.a \
-            -output ../platforms/macos/libgonhanh_core.a
-
-      - name: Build macOS app
-        env:
-          SHOULD_SIGN: ${{ inputs.sign == true && env.APPLE_SIGNING_IDENTITY != '' }}
-          CODE_SIGN_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY || '-' }}
-          DEVELOPMENT_TEAM: ${{ env.APPLE_TEAM_ID }}
-        run: |
-          cd platforms/macos
-
-          if [ "$SHOULD_SIGN" = "true" ]; then
-            echo "Building with Developer ID signing..."
-            xcodebuild -scheme GoNhanh -configuration Release \
-              -derivedDataPath build \
-              CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
-              DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
-              CODE_SIGN_STYLE="Manual" \
-              OTHER_CODE_SIGN_FLAGS="--options=runtime"
-          else
-            echo "Building with ad-hoc signing..."
-            xcodebuild -scheme GoNhanh -configuration Release \
-              -derivedDataPath build \
-              CODE_SIGN_IDENTITY="-"
-          fi
-
-      # ============================================================
-      # PACKAGE (Set version BEFORE signing)
-      # ============================================================
-      - name: Get version from latest release tag
-        id: version
-        run: |
-          git fetch --tags
-          # Find latest RELEASE tag (exclude pre-release tags with "-")
-          LATEST_TAG=$(git tag --sort=-v:refname | grep -v '-' | head -1)
-          LATEST_TAG="${LATEST_TAG:-v1.0.0}"
-          BASE_VERSION="${LATEST_TAG#v}"
-          # Bump patch version by 1 so pre-release is HIGHER than current release
-          MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
-          MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
-          PATCH=$(echo "$BASE_VERSION" | cut -d. -f3)
-          NEXT_PATCH=$((PATCH + 1))
-          BUILD_NUM="${GITHUB_RUN_NUMBER}"
-          # Display version (human-readable, shown in UI)
-          DISPLAY_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}-pre.${BUILD_NUM}"
-          # Bundle version (pure numeric for comparison)
-          BUNDLE_VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}.${BUILD_NUM}"
-          echo "version=$DISPLAY_VERSION" >> $GITHUB_OUTPUT
-          echo "bundle_version=$BUNDLE_VERSION" >> $GITHUB_OUTPUT
-          echo "Pre-release: $DISPLAY_VERSION (bundle: $BUNDLE_VERSION, base: $LATEST_TAG)"
-
-      - name: Set version in app
-        run: |
-          cd platforms/macos
-          APP="build/Build/Products/Release/GoNhanh.app"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "$APP/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.bundle_version }}" "$APP/Contents/Info.plist"
-
-      # ============================================================
-      # CODE SIGNING (After version is set)
-      # ============================================================
-      - name: Sign App with Entitlements
-        env:
-          SHOULD_SIGN: ${{ inputs.sign == true && env.APPLE_SIGNING_IDENTITY != '' }}
-          CODE_SIGN_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY || '-' }}
-        run: |
-          cd platforms/macos
-          APP="build/Build/Products/Release/GoNhanh.app"
-
-          if [ "$SHOULD_SIGN" = "true" ]; then
-            echo "Signing with Developer ID and hardened runtime..."
-            codesign --force --deep --sign "$CODE_SIGN_IDENTITY" \
-              --entitlements GoNhanh.entitlements.production \
-              --options runtime \
-              --timestamp \
-              "$APP"
-          else
-            echo "Signing with ad-hoc identity..."
-            codesign --force --deep --sign - \
-              --entitlements GoNhanh.entitlements \
-              "$APP"
-          fi
-
-          # Verify signature
-          echo "Verifying signature..."
-          codesign -vvv --deep --strict "$APP"
-          echo "Signature verified successfully!"
-
-      - name: Create DMG
-        run: |
-          cd platforms/macos
-          APP="build/Build/Products/Release/GoNhanh.app"
-          V="${{ steps.version.outputs.version }}"
-
-          # Create DMG (version already set, app already signed)
-          ../../scripts/release/dmg.sh "$APP" || {
-            # Fallback: simple DMG if script fails
-            hdiutil create -volname "GoNhanh" -srcfolder "$APP" -ov -format UDZO "build/GoNhanh-${V}.dmg"
-          }
-
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GoNhanh-${{ steps.version.outputs.version }}-macOS
-          path: platforms/macos/build/*.dmg
-          retention-days: 14
-
-      - name: Create GitHub Pre-release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cd platforms/macos
-          V="${{ steps.version.outputs.version }}"
-          TAG_NAME="v${V}"
-          DMG_FILE=$(ls build/*.dmg | head -1)
-
-          gh release create "$TAG_NAME" \
-            --title "GoNhanh $V (Pre-release)" \
-            --notes "Pre-release build from CI." \
-            --prerelease \
-            "$DMG_FILE"
-
-          echo "Created pre-release: $TAG_NAME"
-
-      # ============================================================
-      # CLEANUP
-      # ============================================================
-      - name: Cleanup Keychain
-        if: ${{ always() && inputs.sign == true && env.APPLE_SIGNING_IDENTITY != '' }}
-        run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
-
   build-linux:
-    # Manual trigger only (no auto PR build for Linux)
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform == 'linux' || inputs.platform == 'all') }}
+    # Manual: check platform input | PR merged: owner only
+    if: |
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.user.login == github.repository_owner)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -281,6 +75,7 @@ jobs:
           mkdir -p dist
           cp build/src/libgonhanh.so dist/
           cp -r data/* dist/
+          # Ensure core lib is available for the addon
           cp ../../core/target/release/libgonhanh_core.so dist/ || true
           tar -czvf "gonhanh-${V}-linux.tar.gz" -C dist .
 
@@ -290,3 +85,20 @@ jobs:
           name: GoNhanh-${{ steps.version.outputs.version }}-Linux
           path: platforms/linux/*.tar.gz
           retention-days: 14
+
+      - name: Create GitHub Pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd platforms/linux
+          V="${{ steps.version.outputs.version }}"
+          TAG_NAME="v${V}"
+          TAR_FILE=$(ls *.tar.gz | head -1)
+
+          gh release create "$TAG_NAME" \
+            --title "GoNhanh $V (Linux Pre-release)" \
+            --notes "Linux pre-release build from CI." \
+            --prerelease \
+            "$TAR_FILE"
+
+          echo "Created pre-release: $TAG_NAME"

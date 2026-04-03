@@ -10,11 +10,11 @@
 
 #include "RustBridge.h"
 
-FCITX_DEFINE_LOG_CATEGORY(gonhanh, "gonhanh");
-#define GONHANH_DEBUG() FCITX_LOGC(gonhanh, Debug)
-#define GONHANH_INFO() FCITX_LOGC(gonhanh, Info)
-#define GONHANH_WARN() FCITX_LOGC(gonhanh, Warn)
-#define GONHANH_ERROR() FCITX_LOGC(gonhanh, Error)
+FCITX_DECLARE_LOG_CATEGORY(gonhanh, "gonhanh");
+#define GONHANH_DEBUG() FCITX_LOGC(::gonhanh, Debug)
+#define GONHANH_INFO() FCITX_LOGC(::gonhanh, Info)
+#define GONHANH_WARN() FCITX_LOGC(::gonhanh, Warn)
+#define GONHANH_ERROR() FCITX_LOGC(::gonhanh, Error)
 
 namespace GoNhanh {
 
