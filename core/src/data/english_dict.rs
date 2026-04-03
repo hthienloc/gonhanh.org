@@ -3,8 +3,8 @@
 //! Uses merged dictionary: 10k common words + words with double telex chars.
 //! Only restores to English when raw_input is a known English word.
 
-use std::collections::HashSet;
 use once_cell::sync::Lazy;
+use std::collections::HashSet;
 
 /// Embedded English word list (10k + double telex patterns)
 const ENGLISH_WORDS: &str = include_str!("english_dict_merged.txt");

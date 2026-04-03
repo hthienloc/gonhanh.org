@@ -3,8 +3,8 @@
 //! Uses HashSet-based word lookup for efficient Vietnamese word validation.
 //! Memory-efficient: ~0.5MB vs ~5.5MB with full Hunspell implementation.
 
-use std::collections::HashSet;
 use once_cell::sync::Lazy;
+use std::collections::HashSet;
 
 // Embed dictionary files into binary
 const DIC_VI: &str = include_str!("dictionaries/vi.dic");
@@ -19,8 +19,7 @@ fn parse_dic_to_hashset(dic_content: &'static str) -> HashSet<&'static str> {
 static DICT_VI: Lazy<HashSet<&'static str>> = Lazy::new(|| parse_dic_to_hashset(DIC_VI));
 
 /// Lazy-loaded keep list - words that should not be auto-restored
-static DICT_KEEP: Lazy<HashSet<&'static str>> =
-    Lazy::new(|| parse_dic_to_hashset(DIC_KEEP));
+static DICT_KEEP: Lazy<HashSet<&'static str>> = Lazy::new(|| parse_dic_to_hashset(DIC_KEEP));
 
 /// Check if word starts with foreign consonant (z, w, j, f)
 fn starts_with_foreign_consonant(word: &str) -> bool {
