@@ -12,6 +12,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  cmake(Fcitx5Core)
 BuildRequires:  cmake(Fcitx5Module)
 BuildRequires:  cmake(Fcitx5Utils)
+BuildRequires:  libxkbcommon-devel
 BuildRequires:  pkgconfig
 BuildRequires:  cargo
 BuildRequires:  rust

@@ -10,6 +10,7 @@ BuildRequires:  cmake
 BuildRequires:  extra-cmake-modules
 BuildRequires:  gcc-c++
 BuildRequires:  fcitx5-devel
+BuildRequires:  libxkbcommon-devel
 BuildRequires:  pkg-config
 BuildRequires:  cargo
 BuildRequires:  rust

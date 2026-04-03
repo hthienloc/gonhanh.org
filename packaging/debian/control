@@ -12,6 +12,7 @@ Build-Depends: debhelper (>= 13),
                libfcitx5core-dev,
                libfcitx5config-dev,
                libfcitx5utils-dev,
+               libxkbcommon-dev,
                pkg-config
 Standards-Version: 4.6.0
 
