@@ -1,0 +1,22 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        with:
+          # This should match your project type (rust will update Cargo.toml)
+          release-type: rust
+          # Path to the package (core contains Cargo.toml)
+          package-name: gonhanh-core
+          path: core
