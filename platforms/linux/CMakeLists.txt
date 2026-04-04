@@ -87,7 +87,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/data/gonhanh-addon.conf"
 )
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/data/gonhanh.conf"
-    DESTINATION "${FCITX5_ADDON_DIR}/inputmethod"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/fcitx5/inputmethod"
 )
 
 install(FILES "${RUST_LIB_DIR}/lib${RUST_LIB_NAME}.so"
