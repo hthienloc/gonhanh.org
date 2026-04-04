@@ -60,5 +60,6 @@ CLAUDE.md
 
 refs/
 # Linux
+build/
 platforms/linux/build/
 platforms/linux/*.so
